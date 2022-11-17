@@ -1,0 +1,98 @@
+---
+title: "Class 11: Genome Informatics and High Througput Sequencing"
+author: "Aishwarya Ramesh"
+format: pdf
+---
+
+# Section 1: Proportion of G/G in a Population
+
+Reading csv file
+
+```{r}
+mxl <- read.csv('373531-SampleGenotypes-Homo_sapiens_Variation_Sample_rs8067378.csv')
+head(mxl)
+```
+
+```{r}
+table(mxl$Genotype..forward.strand.) / nrow(mxl) * 100
+```
+Roughly 14.06% are homozygous for asthma associated gene in MXL population. 
+
+
+Now let's look at a different population.
+Looking at GBR population. 
+
+```{r}
+gbr <- read.csv('373522-SampleGenotypes-Homo_sapiens_Variation_Sample_rs8067378.csv')
+
+```
+
+
+FInd proportion of GG in GBR
+
+```{r}
+round(table(gbr$Genotype..forward.strand.) / nrow(gbr) * 100, 2)
+```
+
+This variant that is associated with childbood asthma is more frequent in the GBR population than the MXL population.
+
+Let's now dig into this further. 
+## Section 4: Population Scale Analysis
+
+One sample is obviously not enough to know what is happening in a population. You are
+interested in assessing genetic differences on a population scale. 
+
+How many samples do we have?
+
+
+```{r}
+expr <- read.table("rs8067378_ENSG00000172057.6.txt")
+head(expr)
+```
+
+
+```{r}
+nrow(expr)
+```
+
+We have 462 individuals in this data. 
+
+>Q13: Read this file into R and determine the sample size for each genotype and their
+corresponding median expression levels for each of these genotypes.
+
+Finding sample sizes
+```{r}
+table(expr$geno)
+```
+Finding median expression levels
+
+```{r}
+gg_summary <- summary(expr$exp[expr$geno == 'G/G'])
+ag_summary <- summary(expr$exp[expr$geno == 'A/G'])
+aa_summary <- summary(expr$exp[expr$geno == 'A/A'])
+gg_summary
+ag_summary
+aa_summary
+
+```
+
+The sample size for A/A is 108, the sample size for A/G is 233, the sample size for G/G is 121. The median expression for G/G is 20.074. The median expression for A/G is 25.065. The median expression for A/A is 31.25. 
+
+```{r}
+library(ggplot2)
+
+```
+
+
+> Q14:  Generate a boxplot with a box per genotype, what could you infer from the relative
+expression value between A/A and G/G displayed in this plot? Does the SNP effect the
+expression of ORMDL3?
+
+Making boxplot
+
+```{r}
+ggplot(expr) + aes(geno, exp, fill=geno)+
+  geom_boxplot(notch=TRUE)
+```
+
+The expression is relatively higher for A/A compared to G/G. From this, we can conclude that having a G/G is associated with having a lower expression of this particular gene ORMDL3, and thus that there will be differential asthma outcomes for A/A as compared to G/G.  
