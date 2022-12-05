@@ -1,0 +1,107 @@
+---
+title: "Class 05: Data Visualization with GGPLOT"
+author: "Aishwarya"
+format: pdf
+---
+
+# Our first ggplot
+
+To use the ggplot2 package I first need to have it installed on my computer.
+
+To install packages we use the `install.packages()` command.
+
+Now can I use it? NO! First need to call `library(ggplot2)`
+
+```{r}
+library(ggplot2)
+ggplot()
+```
+
+```{r}
+mpg
+```
+
+Our first plot of displ vs hwy All ggplot() graphs are made in the same way:
+
+-   data + aes + geoms
+
+```{r}
+ggplot(mpg) +
+  aes(x=displ, y=hwy) +
+  geom_point()
+```
+
+
+I can add more layers
+
+```{r}
+ggplot(mpg) +
+  aes(x=displ, y=hwy) +
+  geom_point() +
+  geom_smooth(method=lm, se=FALSE)
+```
+
+## Plot of gene expression data
+
+First read the data from online. 
+
+```{r}
+url <- "https://bioboot.github.io/bimm143_S20/class-material/up_down_expression.txt"
+genes <- read.delim(url)
+head(genes)
+```
+
+
+> Q. How many genes are in this dataset?
+
+```{r}
+nrow(genes)
+```
+
+What are the colnames?
+```{r}
+colnames(genes)
+```
+Creating a scatterplot of Condition1 and Condition2:
+```{r}
+ggplot(genes) +
+  aes(x=Condition1, y=Condition2) +
+  geom_point() #+
+  #geom_smooth(method=lm, se=FALSE)
+```
+
+Adding color now:
+```{r}
+p <- ggplot(genes) +
+  aes(x=Condition1, y=Condition2, col=State) +
+  geom_point()
+p
+```
+
+> Q: How many genes are up regulated and down regulated?
+
+```{r}
+head(genes)
+```
+
+To get at just the State column
+```{r}
+table(genes$State)
+
+```
+
+Another plot
+```{r}
+q <- ggplot(genes) +
+  aes(x=Condition1, y=Condition2, col=State) +
+  geom_point(alpha=0.3)
+q
+```
+
+Making plot more colorful:
+```{r}
+p <- p + scale_colour_manual( values=c("blue","gray","red") ) + labs(title='Gene Expression Changes Upon Drug Treatment',                              x='Control(No Drug)', y='Drug Treatment', )
+p
+```
+
+
