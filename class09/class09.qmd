@@ -1,0 +1,249 @@
+---
+title: "Class 9: Structural Bioinformatics 1."
+author: 'Aishwarya Ramesh'
+format: pdf
+---
+
+```{r}
+#webshot::install_phantomjs()
+```
+
+## The RCSB Protein Data Bank (PDB)
+
+Protein structures by X-ray crystallography dominate this database.
+We are skipping Q1-2 as the website was too slow. 
+
+
+### Visualizing the HIV-1 protease structure
+
+> Question 4: Water molecules normally have 3 atoms. Why do we see just one atom per water molecule in this structure?
+
+We only see one atom per water molecule because the hydrogens are too small to be seen, so only the oxygens are visible at this resolution. 
+
+> Question 5: There is a critical “conserved” water molecule in the binding site. Can you identify this water molecule? What residue number does this water molecule have?
+
+The critical conserved water molecule is near the ligand at residue number 308. 
+
+> Q6: Generate and save a figure clearly showing the two distinct chains of HIV-protease along with the ligand. You might also consider showing the catalytic residues ASP 25 in each chain (we recommend “Ball & Stick” for these side-chains). Add this figure to your Quarto document.
+
+![HIV-Pr structure from 1hsg](1HSG.png)
+
+
+## 3. Introduction to Bio3D in R
+
+Bio3D is an R package for structural bioinformatics. To use it we need to call it with `library()` function (just like any package).
+
+```{r}
+library('bio3d')
+```
+
+
+TO read a PDB file we can use `read.pdb()`
+
+```{r}
+pdb <- read.pdb('1hsg')
+pdb
+```
+
+> Q7: How many amino acid residues are there in this pdb object? 
+
+There are 198 amino acids
+
+> Q8: Name one of the two non-protein residues?
+
+One of the two non-protein residues is MK1, the drug ligand. 
+
+> Q9: How many protein chains are in this structure?  
+
+Threre are two chains in this protein structure. 
+
+
+```{r}
+attributes(pdb)
+```
+
+THe ATOM records of a PDB file are stored in `pdb$atom`
+
+```{r}
+head(pdb$atom)
+```
+
+
+## 4. Comparative structure analysis of Adenylate Kinase (ADK)
+
+Installed packages in console. 
+
+> Q10. Which of the packages above is found only on BioConductor and not CRAN?
+
+msa is found only on BioConductor and not CRAN. 
+
+> Q11. Which of the above packages is not found on BioConductor or CRAN?
+
+bio3d-view is not found on BioConductor or CRAN. 
+
+> Q12. True or False? Functions from the devtools package can be used to install packages from GitHub and BitBucket?
+
+TRUE. 
+
+
+
+We will start our analysis with a single PDB id (code from the PDB database): 1AKE
+
+First we get it's primary sequence:
+
+```{r}
+aa <- get.seq('1ake_a')
+aa
+```
+
+> Q13. How many amino acids are in this sequence, i.e. how long is this sequence? 
+
+There are 214 amino acids in this sequence. 
+
+```{r}
+# Blast or hmmer search
+b <- blast.pdb(aa)
+```
+
+
+```{r}
+hits <-  plot(b)
+# List out some 'top hits'
+# head(hits$pdb.id)
+```
+
+Use these ADK structures for analysis
+
+```{r}
+hits <-  NULL
+hits$pdb.id <-  c('1AKE_A','6S36_A','6RZE_A','3HPR_A','1E4V_A','5EJE_A','1E4Y_A','3X2S_A','6HAP_A','6HAM_A','4K46_A','3GMT_A','4PZL_A')
+```
+
+
+Download all these PDB files from the online database
+
+```{r}
+# Download related PDB files
+files <- get.pdb(hits$pdb.id, path='pdbs', split=TRUE, gzip=TRUE)
+```
+
+
+### Align and superose structures
+
+Align all these structures
+```{r}
+# Align releated PDBs
+pdbs <- pdbaln(files, fit = TRUE, exefile="msa")
+```
+
+
+```{r}
+# Vector containing PDB codes for figure axis
+ids <- basename.pdb(pdbs$id)
+
+dev.off()
+# Draw schematic alignment
+plot(pdbs, labels=ids)
+
+# adjust plot margins
+par(mar = c(1,1,1,1))
+
+
+```
+
+### Annotate collected PDB structures
+
+Annotating structures
+
+```{r}
+anno <- pdb.annotate(ids)
+unique(anno$source)
+
+```
+
+Viewing all available annotation data:
+
+```{r}
+anno
+```
+
+### Principal Component analysis
+
+Performing PCA
+
+```{r}
+# Perform PCA
+pc.xray <- pca(pdbs)
+plot(pc.xray)
+```
+
+
+Calculating pairwise RMSD values
+
+```{r}
+# Calculate RMSD
+rd <- rmsd(pdbs)
+
+# Structure-based clustering
+hc.rd <- hclust(dist(rd))
+grps.rd <- cutree(hc.rd, k=3)
+
+plot(pc.xray, 1:2, col="grey50", bg=grps.rd, pch=21, cex=1)
+```
+
+
+## 5. Optional Further Visualization
+
+Trying to visualize major structural variation
+
+```{r}
+# Visualize first principal component
+pc1 <- mktrj(pc.xray, pc=1, file="pc_1.pdb")
+```
+
+
+Animated visualizations
+
+![Animated PC Visualization](PC_1.PDB_animate-trajectory.mp4)
+
+Plotting main results with ggplot
+
+```{r}
+#Plotting results with ggplot2
+library(ggplot2)
+library(ggrepel)
+
+df <- data.frame(PC1=pc.xray$z[,1], 
+                 PC2=pc.xray$z[,2], 
+                 col=as.factor(grps.rd),
+                 ids=ids)
+
+p <- ggplot(df) + 
+  aes(PC1, PC2, col=col, label=ids) +
+  geom_point(size=2) +
+  geom_text_repel(max.overlaps = 20) +
+  theme(legend.position = "none")
+p
+```
+
+
+
+## 6. Normal mode analysis [optional]
+
+Doing NMA on pdbs
+
+```{r}
+# NMA of all structures
+modes <- nma(pdbs)
+```
+
+Plotting results
+
+```{r}
+plot(modes, pdbs, col=grps.rd)
+```
+
+> Q14. What do you note about this plot? Are the black and colored lines similar or different? Where do you think they differ most and why?
+
+The black and colored lines are quite different. They seem to differ most around residue number 40-50 and from 130-150. This is probably because these are regions that change with the two major conformational states for Adk. That is, they are the flexible binding-site regions that would change their structure upon binding of a ligand. Therefore, those regions exhibit a lot of fluctuation. 
+
